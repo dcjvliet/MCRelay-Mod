@@ -3,6 +3,7 @@ package modding.minestone;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,9 @@ public class DiscordChatInterface implements ModInitializer {
 	public static final String MOD_ID = "discord-chat-interface";
 	public static final Logger logger = LoggerFactory.getLogger(MOD_ID);
 
+	private String lastServer;
+	private String lastChannel;
+
 	@Override
 	public void onInitialize() {
 		logger.info("Initializing Discord Chat Interface Mod");
@@ -24,12 +28,16 @@ public class DiscordChatInterface implements ModInitializer {
 	}
 
 	private void registerCommands() {
+		// registe the main message command
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("dm").then(Commands.argument("server", StringArgumentType.string()).then(Commands.argument("channel", StringArgumentType.string()).then(Commands.argument("message", StringArgumentType.greedyString()).executes(context -> {
 				// get the arguments from the command
 				String server = StringArgumentType.getString(context, "server");
 				String channel = StringArgumentType.getString(context, "channel");
 				String message = StringArgumentType.getString(context, "message");
+
+				this.lastServer = server;
+				this.lastChannel = channel;
 
 				// get the player
 				ServerPlayer player = context.getSource().getPlayer();
@@ -45,6 +53,29 @@ public class DiscordChatInterface implements ModInitializer {
 				}).start();
 				return 1;
 			})))));
+		});
+
+		// register the msglast command
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+			dispatcher.register(Commands.literal("msglast").then(Commands.argument("message", StringArgumentType.greedyString()).executes(context -> {
+				ServerPlayer player = context.getSource().getPlayer();
+
+				// make sure there is a last channel and last server value
+				if (this.lastChannel == null || this.lastServer == null) {
+					player.sendSystemMessage(Component.literal("§cYou haven't messaged a server or channel yet."));
+				}
+
+				String message = StringArgumentType.getString(context,  "message");
+				new Thread(() -> {
+					DiscordBridge.sendMessage(
+							this.lastServer,
+							this.lastChannel,
+							message,
+							player
+					);
+				}).start();
+				return 1;
+			})));
 		});
 	}
 }
