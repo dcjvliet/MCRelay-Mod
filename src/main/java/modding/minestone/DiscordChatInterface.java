@@ -1,5 +1,6 @@
 package modding.minestone;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.commands.Commands;
@@ -24,12 +25,13 @@ public class DiscordChatInterface implements ModInitializer {
 	public void onInitialize() {
 		logger.info("Initializing Discord Chat Interface Mod");
 		registerCommands();
+        SettingsManager.load();
 		logger.info("Successfully initialized Discord Chat Interface Mod");
 	}
 
 	private void registerCommands() {
 		// registe the main message command
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+		CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
 			dispatcher.register(Commands.literal("dm").then(Commands.argument("server", StringArgumentType.string()).then(Commands.argument("channel", StringArgumentType.string()).then(Commands.argument("message", StringArgumentType.greedyString()).executes(context -> {
 				// get the arguments from the command
 				String server = StringArgumentType.getString(context, "server");
@@ -56,9 +58,12 @@ public class DiscordChatInterface implements ModInitializer {
 		});
 
 		// register the msglast command
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+		CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
 			dispatcher.register(Commands.literal("msglast").then(Commands.argument("message", StringArgumentType.greedyString()).executes(context -> {
 				ServerPlayer player = context.getSource().getPlayer();
+                if (player == null) {
+                    return 1;
+                }
 
 				// make sure there is a last channel and last server value
 				if (this.lastChannel == null || this.lastServer == null) {
@@ -77,5 +82,32 @@ public class DiscordChatInterface implements ModInitializer {
 				return 1;
 			})));
 		});
+
+        // register the settings command
+        CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
+            dispatcher.register(Commands.literal("settings").then(Commands.argument("option", StringArgumentType.word()).then(Commands.argument("value", BoolArgumentType.bool()).executes(context -> {
+                ServerPlayer player = context.getSource().getPlayer();
+                if (player == null) {
+                    return 1;
+                }
+
+                boolean value = BoolArgumentType.getBool(context, "value");
+                String option = StringArgumentType.getString(context, "option");
+
+                UserSettings settings = SettingsManager.getUserSettings(player.getUUID());
+                switch (option) {
+                    case "confirmation" -> settings.showConfirmation = value;
+                    case "error" -> settings.showError = value;
+                    case "userMessages" -> settings.showUserMessages = value;
+                    default -> {
+                        player.sendSystemMessage(Component.literal(String.format("§cError: %s is not a valid setting name", option)));
+                        return 1;
+                    }
+                }
+                player.sendSystemMessage(Component.literal(String.format("Successfully set setting %s to %b", option, value)));
+                SettingsManager.save();
+                return 1;
+            }))));
+        });
 	}
 }

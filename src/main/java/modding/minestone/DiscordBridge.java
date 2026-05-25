@@ -41,7 +41,8 @@ public class DiscordBridge {
 
             connection.disconnect();
 
-            handleResponse(player, responseCode, response);
+            UserSettings settings = SettingsManager.getUserSettings(player.getUUID());
+            handleResponse(player, responseCode, response, settings, message);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -66,11 +67,18 @@ public class DiscordBridge {
         return sb.toString();
     }
 
-    private static void handleResponse(ServerPlayer player, int responseCode, String response) {
+    private static void handleResponse(ServerPlayer player, int responseCode, String response, UserSettings settings, String message) {
         if (responseCode >= 200 && responseCode < 300) {
-            player.sendSystemMessage(Component.literal("§aSent to Discord successfully."));
+            if (settings.showConfirmation) {
+                player.sendSystemMessage(Component.literal("§aSent to Discord successfully."));
+            }
+            if (settings.showUserMessages) {
+                player.sendSystemMessage(Component.literal(String.format("%s: %s", player.getName().getString(), message)));
+            }
         } else {
-            player.sendSystemMessage(Component.literal("§cDiscord error (" + responseCode + "): " + response));
+            if (settings.showError) {
+                player.sendSystemMessage(Component.literal("§cDiscord error (" + responseCode + "): " + response));
+            }
         }
     }
 }
