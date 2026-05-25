@@ -96,12 +96,13 @@ public class DiscordChatInterface implements ModInitializer {
         // register the settings command
         CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
             dispatcher.register(Commands.literal("settings")
-					.then(
-							Commands.argument("option", StringArgumentType.word())
-									.suggests(new SettingsSuggestionProvider())
-									.then(
-											Commands.argument("value", BoolArgumentType.bool())
-													.executes(context -> {
+					.then(Commands.literal("set")
+							.then(
+									Commands.argument("option", StringArgumentType.word())
+											.suggests(new SettingsSuggestionProvider())
+											.then(
+													Commands.argument("value", BoolArgumentType.bool())
+															.executes(context -> {
                 ServerPlayer player = context.getSource().getPlayer();
                 if (player == null) {
                     return 1;
@@ -123,7 +124,30 @@ public class DiscordChatInterface implements ModInitializer {
                 player.sendSystemMessage(Component.literal(String.format("Successfully set setting %s to %b", option, value)));
                 SettingsManager.save();
                 return 1;
-            }))));
+            }))))
+					.then(Commands.literal("get")
+							.then(
+									Commands.argument("option", StringArgumentType.word())
+											.suggests(new SettingsSuggestionProvider())
+											.executes(context -> {
+						ServerPlayer player = context.getSource().getPlayer();
+						if (player == null) {
+							return 1;
+						}
+
+						String option = StringArgumentType.getString(context, "option");
+						UserSettings settings = SettingsManager.getUserSettings(player.getUUID());
+
+						switch (option) {
+							case "showConfirmation" -> player.sendSystemMessage(Component.literal(String.format("Value: %b", settings.showConfirmation)));
+							case "showErrors" -> player.sendSystemMessage(Component.literal(String.format("Value: %b", settings.showError)));
+							case "showUserMessages" -> player.sendSystemMessage(Component.literal(String.format("Value: %b", settings.showUserMessages)));
+							default -> player.sendSystemMessage(Component.literal(String.format("§cError: %s is not a valid setting name", option)));
+						}
+
+						return 1;
+					})
+					)));
         });
 	}
 }
