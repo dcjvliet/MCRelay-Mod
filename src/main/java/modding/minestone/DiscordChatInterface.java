@@ -32,7 +32,14 @@ public class DiscordChatInterface implements ModInitializer {
 	private void registerCommands() {
 		// registe the main message command
 		CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
-			dispatcher.register(Commands.literal("dm").then(Commands.argument("server", StringArgumentType.string()).then(Commands.argument("channel", StringArgumentType.string()).then(Commands.argument("message", StringArgumentType.greedyString()).executes(context -> {
+			dispatcher.register(Commands.literal("dm")
+					.then(
+							Commands.argument("server", StringArgumentType.string())
+									.then(
+											Commands.argument("channel", StringArgumentType.string())
+													.then(
+															Commands.argument("message", StringArgumentType.greedyString())
+																	.executes(context -> {
 				// get the arguments from the command
 				String server = StringArgumentType.getString(context, "server");
 				String channel = StringArgumentType.getString(context, "channel");
@@ -59,7 +66,10 @@ public class DiscordChatInterface implements ModInitializer {
 
 		// register the msglast command
 		CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
-			dispatcher.register(Commands.literal("msglast").then(Commands.argument("message", StringArgumentType.greedyString()).executes(context -> {
+			dispatcher.register(Commands.literal("msglast")
+					.then(
+							Commands.argument("message", StringArgumentType.greedyString())
+									.executes(context -> {
 				ServerPlayer player = context.getSource().getPlayer();
                 if (player == null) {
                     return 1;
@@ -85,7 +95,13 @@ public class DiscordChatInterface implements ModInitializer {
 
         // register the settings command
         CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
-            dispatcher.register(Commands.literal("settings").then(Commands.argument("option", StringArgumentType.word()).then(Commands.argument("value", BoolArgumentType.bool()).executes(context -> {
+            dispatcher.register(Commands.literal("settings")
+					.then(
+							Commands.argument("option", StringArgumentType.word())
+									.suggests(new SettingsSuggestionProvider())
+									.then(
+											Commands.argument("value", BoolArgumentType.bool())
+													.executes(context -> {
                 ServerPlayer player = context.getSource().getPlayer();
                 if (player == null) {
                     return 1;
@@ -96,9 +112,9 @@ public class DiscordChatInterface implements ModInitializer {
 
                 UserSettings settings = SettingsManager.getUserSettings(player.getUUID());
                 switch (option) {
-                    case "confirmation" -> settings.showConfirmation = value;
-                    case "error" -> settings.showError = value;
-                    case "userMessages" -> settings.showUserMessages = value;
+                    case "showConfirmation" -> settings.showConfirmation = value;
+                    case "showErrors" -> settings.showError = value;
+                    case "showUserMessages" -> settings.showUserMessages = value;
                     default -> {
                         player.sendSystemMessage(Component.literal(String.format("§cError: %s is not a valid setting name", option)));
                         return 1;
