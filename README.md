@@ -6,7 +6,9 @@ Install the .jar file on the server that the Minecraft server runs from. You mus
 
 ## Usage
 
-In order to use the mod in-game, it must be installed server-side. Clients can then use the `/dm` command to message specific channels. The syntax is `/dm <server_name> <channel_name> <message>`. The message will then be sent to the appropriate Discord channel. You must have permissions to send messages in that channel, and you must have your Minecraft and Discord accounts linked through the bot. 
+In order to use the mod in-game, it must be installed server-side. In order for a player to use the mod, their Discord and Minecraft accounts must be linked through the Discord bot.
+- `/dm <server> <channel> <message>`: Send the message to the specified server and channel. You must have permissions to send messages in that channel. If the server or channel arguments are multiple words, they must be in quotes.
+- `/msglast <message>`: Send the message to the last messaged server and channel. You must have permissions to send messages in that channel.
 
 ## License
 
