@@ -1,5 +1,6 @@
 package modding.minestone;
 
+import com.google.gson.Gson;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -7,6 +8,8 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 
 public class DiscordBridge {
@@ -43,6 +46,39 @@ public class DiscordBridge {
 
             UserSettings settings = SettingsManager.getUserSettings(player.getUUID());
             handleResponse(player, responseCode, response, settings, message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void getData(ServerPlayer player) {
+        try {
+            URL url = new URI("http://localhost:5000/get_user_data?username=" + URLEncoder.encode(player.getName().getString(), StandardCharsets.UTF_8)).toURL();
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            int responseCode = connection.getResponseCode();
+            InputStream stream = (responseCode >= 200 && responseCode < 300) ? connection.getInputStream() : connection.getErrorStream();
+
+            String response = readStream(stream);
+
+            connection.disconnect();
+
+            UserSettings settings = SettingsManager.getUserSettings(player.getUUID());
+            if (responseCode >= 200 && responseCode < 300) {
+                Gson gson = new Gson();
+                UserDataResponse dataResponse = gson.fromJson(response, UserDataResponse.class);
+                settings.guilds = dataResponse.guilds;
+                if (settings.showConfirmation) {
+                    player.sendSystemMessage(Component.literal("§aSuccessfully loaded Discord servers and channels."));
+                }
+            } else {
+                if (settings.showError) {
+                    player.sendSystemMessage(Component.literal("§cDiscord error (" + responseCode + "): " + response));
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

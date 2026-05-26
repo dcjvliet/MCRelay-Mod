@@ -3,6 +3,7 @@ package modding.minestone;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +27,14 @@ public class DiscordChatInterface implements ModInitializer {
 		logger.info("Initializing Discord Chat Interface Mod");
 		registerCommands();
         SettingsManager.load();
+
+		// track player logins to automatically fetch Discord information
+		ServerPlayConnectionEvents.JOIN.register((handler, _, _) -> {
+			ServerPlayer player = handler.getPlayer();
+			new Thread(() -> {
+				DiscordBridge.getData(player);
+			}).start();
+		});
 		logger.info("Successfully initialized Discord Chat Interface Mod");
 	}
 
@@ -35,8 +44,10 @@ public class DiscordChatInterface implements ModInitializer {
 			dispatcher.register(Commands.literal("dm")
 					.then(
 							Commands.argument("server", StringArgumentType.string())
+									.suggests(new ServerSuggestionProvider())
 									.then(
 											Commands.argument("channel", StringArgumentType.string())
+													.suggests(new ChannelSuggestionProvider())
 													.then(
 															Commands.argument("message", StringArgumentType.greedyString())
 																	.executes(context -> {
@@ -149,5 +160,18 @@ public class DiscordChatInterface implements ModInitializer {
 					})
 					)));
         });
+
+		// register command to refresh Discord servers and channels
+		CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
+			dispatcher.register(Commands.literal("refresh")
+					.executes(context -> {
+						ServerPlayer player = context.getSource().getPlayer();
+
+						new Thread(() -> {
+							DiscordBridge.getData(player);
+						}).start();
+						return 1;
+					}));
+		});
 	}
 }
