@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 
 import java.awt.*;
+import java.util.HashMap;
+import java.util.UUID;
 
 
 public class DiscordChatInterface implements ModInitializer {
@@ -21,6 +23,9 @@ public class DiscordChatInterface implements ModInitializer {
 
 	private String lastServer;
 	private String lastChannel;
+
+	private static final HashMap<UUID, Long> lastRefresh = new HashMap<>();
+	private static final long refreshInterval = 60_000;
 
 	@Override
 	public void onInitialize() {
@@ -31,8 +36,15 @@ public class DiscordChatInterface implements ModInitializer {
 		// track player logins to automatically fetch Discord information
 		ServerPlayConnectionEvents.JOIN.register((handler, _, _) -> {
 			ServerPlayer player = handler.getPlayer();
+			long now = System.currentTimeMillis();
+			Long latestRefresh = lastRefresh.get(player.getUUID());
+			if (latestRefresh != null && now - latestRefresh < refreshInterval) {
+				return;
+			}
+			lastRefresh.put(player.getUUID(), now);
+
 			new Thread(() -> {
-				DiscordBridge.getData(player);
+				DiscordBridge.getData(player, false);
 			}).start();
 		});
 		logger.info("Successfully initialized Discord Chat Interface Mod");
@@ -165,10 +177,10 @@ public class DiscordChatInterface implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, _, _) -> {
 			dispatcher.register(Commands.literal("refresh")
 					.executes(context -> {
-						ServerPlayer player = context.getSource().getPlayer();
+						ServerPlayer player = context.getSource().getPlayerOrException();
 
 						new Thread(() -> {
-							DiscordBridge.getData(player);
+							DiscordBridge.getData(player, true);
 						}).start();
 						return 1;
 					}));

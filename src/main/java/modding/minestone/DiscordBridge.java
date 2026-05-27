@@ -10,9 +10,14 @@ import java.net.URL;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.UUID;
 
 
 public class DiscordBridge {
+    private static final long refreshInterval = 60_000;
+    private static final HashMap<UUID, Long> lastRefresh = new HashMap<>();
+
     public static void sendMessage(String guild, String channel, String message, ServerPlayer player) {
         try {
             URL url = new URI(
@@ -51,7 +56,16 @@ public class DiscordBridge {
         }
     }
 
-    public static void getData(ServerPlayer player) {
+    public static void getData(ServerPlayer player, boolean showRateLimit) {
+        long now = System.currentTimeMillis();
+        Long latestRefresh = lastRefresh.get(player.getUUID());
+        if (latestRefresh != null && now - latestRefresh < refreshInterval) {
+            if (showRateLimit) {
+                player.sendSystemMessage(Component.literal("§cYou're command too often. Please wait and try again."));
+            }
+            return;
+        }
+        lastRefresh.put(player.getUUID(), now);
         try {
             URL url = new URI("http://localhost:5000/get_user_data?username=" + URLEncoder.encode(player.getName().getString(), StandardCharsets.UTF_8)).toURL();
 
