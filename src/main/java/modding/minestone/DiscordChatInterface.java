@@ -24,9 +24,6 @@ public class DiscordChatInterface implements ModInitializer {
 	private String lastServer;
 	private String lastChannel;
 
-	private static final HashMap<UUID, Long> lastRefresh = new HashMap<>();
-	private static final long refreshInterval = 60_000;
-
 	@Override
 	public void onInitialize() {
 		logger.info("Initializing Discord Chat Interface Mod");
@@ -36,13 +33,6 @@ public class DiscordChatInterface implements ModInitializer {
 		// track player logins to automatically fetch Discord information
 		ServerPlayConnectionEvents.JOIN.register((handler, _, _) -> {
 			ServerPlayer player = handler.getPlayer();
-			long now = System.currentTimeMillis();
-			Long latestRefresh = lastRefresh.get(player.getUUID());
-			if (latestRefresh != null && now - latestRefresh < refreshInterval) {
-				return;
-			}
-			lastRefresh.put(player.getUUID(), now);
-
 			new Thread(() -> {
 				DiscordBridge.getData(player, false);
 			}).start();
